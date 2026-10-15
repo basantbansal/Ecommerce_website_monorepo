@@ -52,28 +52,37 @@ This repository is a monorepo containing both the frontend and backend:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/basantbansal/Ecommerce_website.git
-   cd Ecommerce_website
+   git clone https://github.com/basantbansal/Ecommerce_website_monorepo.git
+   cd Ecommerce_website_monorepo
    ```
 
-2. **Setup the Backend:**
+2. **Install Dependencies:**
    ```bash
-   cd backend
-   npm install
-   ```
-   *Create a `.env` file in the `backend` directory based on `.env.sample` and add your API keys.*
-   ```bash
-   npm run dev
+   npm --prefix frontend install
+   npm --prefix backend install
    ```
 
-3. **Setup the Frontend:**
+3. **Configure Environment:**
+   *Copy `backend/.env.sample` to `backend/.env` and supply your MongoDB connection string (required for backend boot):*
    ```bash
-   cd ../frontend
-   npm install
+   cp backend/.env.sample backend/.env
    ```
-   *Create a `.env` file in the `frontend` directory if needed (for API URLs).*
+
+4. **Run Locally:**
+   * **Backend:**
+     ```bash
+     npm --prefix backend run dev
+     # Runs Express API on http://localhost:8000
+     ```
+   * **Frontend:**
+     ```bash
+     npm --prefix frontend start
+     # Runs Vite development server on http://localhost:3000
+     ```
+
+5. **Build for Production:**
    ```bash
-   npm start
+   npm --prefix frontend run build
    ```
 
 ## 📜 License

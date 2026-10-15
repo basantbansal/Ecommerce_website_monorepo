@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { FiShoppingBag } from 'react-icons/fi';
@@ -75,7 +75,7 @@ const RamCopilotInner = () => {
   // SECURITY: Only allow opening if user is authenticated
   const isOpen = user && searchParams.get('ram') === 'open';
 
-  const setIsOpen = (open) => {
+  const setIsOpen = useCallback((open) => {
     if (open) {
       if (!user) {
         navigate('/login');
@@ -87,7 +87,7 @@ const RamCopilotInner = () => {
       searchParams.delete('ram');
       setSearchParams(searchParams);
     }
-  };
+  }, [user, navigate, searchParams, setSearchParams]);
 
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('ram_messages');
@@ -208,7 +208,7 @@ const RamCopilotInner = () => {
     rzp.open();
   };
 
-  const handleBuySingleProduct = (product) => {
+  const handleBuySingleProduct = (product, qty = 1) => {
     handleSend(`I want to buy ${qty}x ${product.title} (ID: ${product.id || product._id}). Please create a Razorpay order.`);
   };
 

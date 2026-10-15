@@ -70,36 +70,41 @@ Before you begin, ensure you have the following installed:
 
 ## 🔧 Environment Setup
 
-Create a `.env` file in the root directory with the following variables:
+Create a `.env` file in the `backend/` directory based on `.env.sample`.
 
-```env
-# Server Configuration
-PORT=8000
+### 1. Mandatory Startup Configuration
+The backend **will not start** without a reachable MongoDB instance:
+- `MONGODB_URI`: Connection string (e.g., `mongodb://localhost:27017` or MongoDB Atlas URI).
+- `PORT`: Port for the API server (default: `8000`).
+- `NODE_ENV`: Set to `development` or `production`.
 
-# Database Configuration
-MONGODB_URI=mongodb://your_mongodb_connection_string
-DB_NAME=ecommerce_db
+### 2. Core Authentication & Security
+Required for user registration, login, and protected routes:
+- `ACCESS_TOKEN_SECRET` / `REFRESH_TOKEN_SECRET`: Random secret strings for JWT signing.
+- `ACCESS_TOKEN_EXPIRY` (e.g. `1d`) / `REFRESH_TOKEN_EXPIRY` (e.g. `7d`).
+- `TURNSTILE_SECRET_KEY`: Cloudflare Turnstile secret key for bot verification on login/register.
+- `GOOGLE_CLIENT_ID`: Google OAuth client ID (only needed for Google login).
 
-# JWT Configuration
-JWT_SECRET=your_jwt_secret_key
-
-# Cloudinary Configuration
-CLOUDINARY_NAME=your_cloudinary_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-
-# Other Configuration
-NODE_ENV=development
-```
+### 3. Optional Integrations
+Only needed when the corresponding feature is used:
+- **Cloudinary** (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`): User avatars and product images.
+- **Razorpay** (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`): Checkout and payment orders.
+- **Resend** (`RESEND_API_KEY`, `EMAIL_FROM`, `FRONTEND_URL`): Email verification and password resets. In development, email errors are logged non-blockingly to the console.
+- **AI Agent** (`ANTHROPIC_AUTH_TOKEN`, `GOOGLE_API_KEY`): Connects to local OmniRoute assistant.
 
 ## ▶️ Running the Application
 
-**Development Mode** (with auto-reload using nodemon):
+From the monorepo root:
 ```bash
-npm run dev
+npm --prefix backend run dev    # Development mode with Nodemon
+npm --prefix backend start      # Production start (node src/index.js)
 ```
 
-The server will start on `http://localhost:8000` (or your configured PORT).
+Or from within the `backend/` folder:
+```bash
+npm run dev
+npm start
+```
 
 ## 📁 Project Structure
 
