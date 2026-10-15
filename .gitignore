@@ -4,6 +4,8 @@
 *.env
 *.env.local
 !*.env.sample
+!*.env.example
+!.env.example
 razorpay_*_api_keys_*.csv
 *.pem
 *.key

@@ -44,7 +44,7 @@ function LoginPage() {
         } catch (err) {
             const message = err.response?.data?.message || "Login failed"
             setError(message)
-            setNeedsVerification(err.response?.status === 403)
+            setNeedsVerification(err.response?.status === 403 && message.toLowerCase().includes("verify your email"))
         }
     }
 

@@ -173,6 +173,11 @@ const loginUser = asyncHandler(async (req, res) =>{
         throw new ApiError(400, "Security check token is required")
     }
 
+    if (!process.env.TURNSTILE_SECRET_KEY) {
+        console.error("TURNSTILE_SECRET_KEY is not defined in environment variables");
+        throw new ApiError(500, "Security check configuration error");
+    }
+
     // Verify Turnstile Token with Cloudflare
     const formData = new URLSearchParams();
     formData.append('secret', process.env.TURNSTILE_SECRET_KEY);
@@ -186,6 +191,9 @@ const loginUser = asyncHandler(async (req, res) =>{
     const verifyJson = await verifyRes.json();
 
     if (!verifyJson.success) {
+        if (process.env.NODE_ENV === "development") {
+            console.error("Turnstile verification failed with error codes:", verifyJson['error-codes']);
+        }
         throw new ApiError(403, "Security check failed. Please refresh the page and try again.")
     }
     
