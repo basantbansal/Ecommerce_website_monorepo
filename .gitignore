@@ -19,6 +19,11 @@ dist-ssr/
 build/
 .vercel
 
+# Test & Coverage Outputs
+coverage/
+.nyc_output/
+test-results/
+
 # Logs
 logs/
 *.log

@@ -113,7 +113,7 @@ function ItemDetails() {
     {
       label: "Dimensions",
       value: item.dimensions
-        ? `${item.dimensions.width}W x Rs. {item.dimensions.height}H x Rs. {item.dimensions.depth}D`
+        ? `${item.dimensions.width}W x ${item.dimensions.height}H x ${item.dimensions.depth}D`
         : null,
     },
     { label: "Shipping", value: item.shippingInformation },
