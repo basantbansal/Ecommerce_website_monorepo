@@ -11,6 +11,9 @@
 
 A full-stack e-commerce monorepo featuring role-based access control (Customer and Seller), secure session authentication, Cloudflare Turnstile bot protection, Cloudinary media management, Razorpay payment processing, and an intelligent AI commerce assistant (**RAM Copilot**) with deterministic policy guardrails built on LangChain and LangGraph.
 
+* 🌐 **Live Storefront (Vercel):** [https://e-commerce-website-ten-dusky.vercel.app](https://e-commerce-website-ten-dusky.vercel.app)
+* ⚡ **Live API Service (Render):** [https://my-backend-6vy3.onrender.com/api/v1/health](https://my-backend-6vy3.onrender.com/api/v1/health)
+
 ---
 
 ## 📌 Project Origins & Monorepo Consolidation
