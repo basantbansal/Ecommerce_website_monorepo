@@ -1,0 +1,55 @@
+# Environment & Secrets
+.env
+.env.*
+*.env
+*.env.local
+!*.env.sample
+razorpay_*_api_keys_*.csv
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+
+# Production Build Outputs
+dist/
+dist-ssr/
+build/
+.vercel
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary Uploads (preserve temp directory structure via .gitkeep)
+backend/public/temp/*
+!backend/public/temp/.gitkeep
+
+# Local Patches & Scratch Notes
+*.patch
+*.diff
+backend/future_plans
+
+# Local Agent & Tool Directories
+.claude/
+.codex
+.agents/
+.playwright/
+.shannon/
