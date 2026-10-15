@@ -12,6 +12,10 @@ import agentRoute from "./routes/agent.route.js";
 
 const app = express();
 
+// Trust first proxy hop for reverse proxy environments (e.g. Render)
+// This ensures express-rate-limit correctly resolves client IP from X-Forwarded-For
+app.set("trust proxy", 1);
+
 const allowedOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")
   .map((origin) => origin.trim())

@@ -25,10 +25,9 @@ const sendVerificationEmail = async (user) => {
     await user.save({ validateBeforeSave: false })
     const url = `${frontendUrl()}/verify-email?token=${token}`
     
-    console.log(`\n======================================================`)
-    console.log(`📧 [Development] Verification URL for ${user.email}:`)
-    console.log(`👉 ${url}`)
-    console.log(`======================================================\n`)
+    if (process.env.NODE_ENV === "development") {
+        console.log(`[EmailVerification] Token generated for user ID: ${user._id}`);
+    }
 
     try {
         await sendEmail({
@@ -38,7 +37,7 @@ const sendVerificationEmail = async (user) => {
             html: `<p>Welcome to Amazing Store.</p><p><a href="${url}">Verify your email address</a></p><p>This link expires in 24 hours.</p>`
         })
     } catch (error) {
-        console.error("Resend API Error:", error)
+        console.error("[EmailVerification] Resend delivery failure:", error.message || error)
         // In development, we don't want to break registration if Resend sandbox blocks the email
         if (process.env.NODE_ENV === "production") {
             throw error;
@@ -373,34 +372,48 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
 
 const forgotPassword = asyncHandler(async (req, res) => {
     const { email } = req.body
-    const message = "If an account exists for that email, a password-reset link has been sent."
+    const genericMessage = "If an account exists for that email, a password-reset link has been sent."
+
     if (!email || !emailPattern.test(email.trim())) {
-        return res.status(200).json(new ApiResponse(200, {}, message))
+        console.warn("[ForgotPassword] Request rejected: missing or invalid email format")
+        return res.status(200).json(new ApiResponse(200, {}, genericMessage))
     }
 
-    const user = await User.findOne({ email: email.trim().toLowerCase() })
-    if (user?.emailVerified) {
+    const normalizedEmail = email.trim().toLowerCase()
+    const user = await User.findOne({ email: normalizedEmail })
+
+    if (!user) {
+        console.warn("[ForgotPassword] Account not found for provided email; returning generic response")
+        return res.status(200).json(new ApiResponse(200, {}, genericMessage))
+    }
+
+    if (!process.env.RESEND_API_KEY) {
+        console.error("[ForgotPassword] Configuration error: RESEND_API_KEY is not defined")
+        throw new ApiError(500, "Email service is not configured. Please contact support.")
+    }
+
+    try {
         const token = user.createPasswordResetToken()
         await user.save({ validateBeforeSave: false })
         const url = `${frontendUrl()}/reset-password?token=${token}`
-        
-        console.log(`\n======================================================`)
-        console.log(`🔑 [Development] Password Reset URL for ${user.email}:`)
-        console.log(`👉 ${url}`)
-        console.log(`======================================================\n`)
 
-        try {
-            await sendEmail({
-                to: user.email,
-                subject: "Reset your Amazing Store password",
-                text: `Reset your password by opening this link: ${url}`,
-                html: `<p>We received a request to reset your password.</p><p><a href="${url}">Reset your password</a></p><p>This link expires in 15 minutes.</p>`
-            })
-        } catch (error) {
-            console.error("Resend API Error (Reset Password):", error)
+        if (process.env.NODE_ENV === "development") {
+            console.log(`[ForgotPassword] Reset token generated for user ID: ${user._id}`)
         }
+
+        await sendEmail({
+            to: user.email,
+            subject: "Reset your Amazing Store password",
+            text: `Reset your password by opening this link: ${url}`,
+            html: `<p>We received a request to reset your password.</p><p><a href="${url}">Reset your password</a></p><p>This link expires in 15 minutes.</p>`
+        })
+    } catch (error) {
+        if (error instanceof ApiError) throw error
+        console.error("[ForgotPassword] Resend delivery failure:", error.message || error)
+        throw new ApiError(503, "Failed to send password-reset email. Please try again later.")
     }
-    return res.status(200).json(new ApiResponse(200, {}, message))
+
+    return res.status(200).json(new ApiResponse(200, {}, genericMessage))
 })
 
 const resetPassword = asyncHandler(async (req, res) => {
@@ -420,6 +433,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     user.passwordResetToken = undefined
     user.passwordResetExpires = undefined
     user.refreshToken = undefined
+    user.emailVerified = true
     await user.save()
     return res.status(200).json(new ApiResponse(200, {}, "Password reset successfully. Please log in."))
 })
