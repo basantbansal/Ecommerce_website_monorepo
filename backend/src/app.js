@@ -9,12 +9,47 @@ import cartRoute from "./routes/cart.route.js";
 import orderRoute from "./routes/order.route.js";
 import paymentRoute from "./routes/payment.route.js";
 import agentRoute from "./routes/agent.route.js";
+import client from 'prom-client';
+
 
 const app = express();
+app.set("trust proxy", 1);
+
+
+// Collect default system metrics (CPU, RAM, Event Loop) every 5 seconds
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics({ register: client.register });
+
+// Expose the /metrics endpoint strictly for Prometheus
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', client.register.contentType);
+    res.end(await client.register.metrics());
+  } catch (err) {
+    res.status(500).end(err);
+  }
+});
+
+
+// Measure request duration & status codes
+const httpRequestDurationMicroseconds = new client.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'code'],
+  buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5] // duration buckets in seconds
+});
+
+// Middleware to track request timings
+app.use((req, res, next) => {
+  const end = httpRequestDurationMicroseconds.startTimer();
+  res.on('finish', () => {
+    end({ route: req.route?.path || req.path, code: res.statusCode, method: req.method });
+  });
+  next();
+});
 
 // Trust first proxy hop for reverse proxy environments (e.g. Render)
 // This ensures express-rate-limit correctly resolves client IP from X-Forwarded-For
-app.set("trust proxy", 1);
 
 const allowedOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")

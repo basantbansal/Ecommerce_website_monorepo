@@ -13,6 +13,11 @@ razorpay_*_api_keys_*.csv
 # Dependencies
 node_modules/
 
+# Container & Kubernetes Artifacts
+*.tar
+*.tar.gz
+.minikube/
+
 # Production Build Outputs
 dist/
 dist-ssr/

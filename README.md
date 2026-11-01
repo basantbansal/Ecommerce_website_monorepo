@@ -34,6 +34,7 @@ A full-stack e-commerce web platform and monorepo featuring customer and seller 
 - [Environment Variables Reference](#-environment-variables-reference)
 - [Third-Party Services Configuration](#-third-party-services-configuration)
 - [Deployment Guide (Vercel & Render)](#-deployment-guide-vercel--render)
+- [Kubernetes Deployment & Observability Stack](#-kubernetes-deployment--observability-stack)
 - [Backend REST API Overview](#-backend-rest-api-overview)
 - [Testing & Quality Verification](#-testing--quality-verification)
 - [Security Architecture](#-security-architecture)
@@ -133,6 +134,8 @@ flowchart TD
 | **Media & File Storage** | [Cloudinary](https://cloudinary.com/) API via [Multer](https://github.com/expressjs/multer) (UUID filename protection) |
 | **Transactional Email** | [Resend](https://resend.com/) SDK |
 | **AI Agent & Guardrails** | [LangChain Core](https://js.langchain.com/), [LangGraph](https://langchain-ai.github.io/langgraphjs/), Custom Policy Engine |
+| **Containerization & Orchestration** | [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/), [Kubernetes](https://kubernetes.io/) ([Minikube](https://minikube.sigs.k8s.io/)) |
+| **Observability & Monitoring** | [Prometheus](https://prometheus.io/), [Grafana](https://grafana.com/), [`prom-client`](https://github.com/siimon/prom-client) |
 | **Testing & CI Tooling** | Node.js Test Runner (`node:test`, `node:assert`), GitHub Actions, [ESLint 9](https://eslint.org/), [Prettier](https://prettier.io/) |
 
 ---
@@ -145,6 +148,8 @@ Ecommerce_website_monorepo/
 │   ├── ISSUE_TEMPLATE/        # Standardized GitHub issue templates
 │   └── workflows/
 │       └── ci.yml             # GitHub Actions CI workflow (tests, syntax, lint, build)
+├── docs/
+│   └── assets/                # Documentation screenshots & architecture assets
 ├── backend/
 │   ├── public/temp/           # Temporary staging directory for Multer file uploads
 │   ├── src/
@@ -157,11 +162,13 @@ Ecommerce_website_monorepo/
 │   │   ├── services/          # RAM Copilot agent core, tool registry & policy engine
 │   │   ├── tests/             # Automated test suite (forgot password, email delivery, proxy)
 │   │   ├── utils/             # ApiError, ApiResponse, asyncHandler, Cloudinary & Resend helpers
-│   │   ├── app.js             # Express application configuration & proxy setup
+│   │   ├── app.js             # Express application configuration, prom-client metrics & proxy setup
 │   │   ├── index.js           # Server bootstrap entry point
 │   │   └── setup.js           # Dotenv environment configuration loader
+│   ├── .dockerignore          # Docker build exclusion rules
 │   ├── .env.example           # Backend environment template
 │   ├── .env.sample            # Backward-compatible sample template
+│   ├── Dockerfile             # Multi-stage container build image (Node 20 Alpine)
 │   ├── nodemon.json           # Nodemon watcher configuration
 │   └── package.json           # Backend dependencies and test scripts
 ├── frontend/
@@ -180,6 +187,11 @@ Ecommerce_website_monorepo/
 │   ├── vercel.json            # Vercel SPA routing rewrites configuration
 │   ├── vite.config.js         # Vite bundler configuration (port 3000, React, Tailwind)
 │   └── package.json           # Frontend dependencies and scripts
+├── k8s/                       # Kubernetes manifests for local cluster orchestration
+│   ├── backend.yaml           # Backend deployment (2 replicas, secret injection) & NodePort service
+│   ├── mongo.yaml             # MongoDB deployment, PersistentVolumeClaim (2Gi) & ClusterIP service
+│   └── monitoring.yaml        # Monitoring namespace, Prometheus ConfigMap/Deployment & Grafana stack
+├── docker-compose.yml         # Docker Compose orchestration for local containerized dev
 ├── .env.example               # Root reference environment template
 ├── .gitignore                 # Comprehensive gitignore protecting credentials and builds
 ├── CONTRIBUTING.md            # Guidelines for open-source contributors
@@ -375,11 +387,167 @@ Below is the complete reference of all environment variables used by the platfor
 
 ---
 
+## ☸️ Kubernetes Deployment & Observability Stack
+
+The monorepo provides a production-grade containerized deployment and observability stack designed for local Kubernetes clusters ([Minikube](https://minikube.sigs.k8s.io/)) and cloud orchestrators.
+
+### 1. Architecture & Manifests
+
+All Kubernetes resources are structured in the [`k8s/`](k8s/) directory:
+
+* **MongoDB Service & Persistent Storage ([`k8s/mongo.yaml`](k8s/mongo.yaml)):**
+  * **PersistentVolumeClaim (`mongo-pvc`):** Requests 2Gi of `ReadWriteOnce` persistent storage to safeguard database state across pod restarts.
+  * **Deployment (`mongo-deployment`):** Deploys the official `mongo:7.0` image mounting persistent storage at `/data/db`.
+  * **Service (`mongo-service`):** Exposes an internal `ClusterIP` on port `27017` reachable within the cluster at `mongo-service.default.svc.cluster.local:27017`.
+
+* **Express Backend Service ([`k8s/backend.yaml`](k8s/backend.yaml)):**
+  * **Deployment (`backend-deployment`):** Runs 2 replicated instances of `ecommerce-backend:v1` with specified CPU/memory requests (`100m` / `128Mi`) and limits (`500m` / `512Mi`).
+  * **Secret Injection (`backend-secrets`):** Decouples credentials from manifests by injecting runtime environment variables using `envFrom.secretRef`.
+  * **Service (`backend-service`):** Exposes a `NodePort` on port `8000` (`nodePort: 30080`) annotated for Prometheus discovery (`prometheus.io/scrape: "true"`, `prometheus.io/path: "/metrics"`, `prometheus.io/port: "8000"`).
+
+* **Observability Stack ([`k8s/monitoring.yaml`](k8s/monitoring.yaml)):**
+  * Deployed inside a dedicated `monitoring` namespace to isolate infrastructure telemetry from application workloads.
+  * **Prometheus (`prometheus-deployment` / `prometheus-service`):** Runs Prometheus `v2.50.0` with a configured scrape interval of `5s` targeting `backend-service.default.svc.cluster.local:8000/metrics`.
+  * **Grafana (`grafana-deployment` / `grafana-service`):** Runs Grafana `v10.4.0` on port `3000` with pre-provisioned administrative credentials.
+
+### 2. Application Metrics Instrumentation (`prom-client`)
+
+The Express backend ([`backend/src/app.js`](backend/src/app.js)) is instrumented with [`prom-client`](https://github.com/siimon/prom-client):
+
+* **System & V8 Default Metrics:**
+  * Initialized via `client.collectDefaultMetrics({ register: client.register })`.
+  * Tracks Node.js event loop lag, CPU utilization (`process_cpu_user_seconds_total`, `process_cpu_system_seconds_total`), heap memory usage (`nodejs_heap_size_used_bytes`), active libuv handles, and garbage collection duration every 5 seconds.
+
+* **HTTP Request Duration Histogram (`http_request_duration_seconds`):**
+  * Custom Prometheus `Histogram` measuring end-to-end request latency in seconds.
+  * Buckets configured for API latency distributions: `[0.1, 0.3, 0.5, 0.7, 1, 3, 5]`.
+  * Middleware records labels dynamically upon response completion (`res.on('finish', ...)`):
+    * `method`: HTTP method (`GET`, `POST`, `PATCH`, `DELETE`).
+    * `route`: Resolved Express route template (or fallback request path).
+    * `code`: HTTP status code (`200`, `400`, `404`, `500`, etc.).
+
+* **Prometheus Metrics Endpoint:**
+  * Exposes `GET /metrics` formatted with standard Prometheus content-type (`client.register.contentType`).
+
+### 3. Step-by-Step Local Deployment Guide
+
+#### Step 1: Start Minikube & Configure Docker Environment
+```bash
+# Start your local Minikube cluster
+minikube start
+
+# Configure terminal to use Minikube's in-cluster Docker daemon
+eval $(minikube docker-env)
+```
+
+#### Step 2: Build the Backend Docker Image
+Build the backend image inside Minikube's Docker runtime so the Kubernetes deployment can pull it locally without an external registry:
+```bash
+docker build -t ecommerce-backend:v1 -f backend/Dockerfile backend/
+```
+
+#### Step 3: Create the Kubernetes Secret
+Securely inject backend environment configuration into the cluster without committing secrets to Git:
+```bash
+kubectl create secret generic backend-secrets \
+  --from-literal=PORT=8000 \
+  --from-literal=NODE_ENV=production \
+  --from-literal=MONGODB_URI="mongodb://mongo-service.default.svc.cluster.local:27017/ecommercedb" \
+  --from-literal=ACCESS_TOKEN_SECRET="your_secure_access_secret_32_characters_minimum" \
+  --from-literal=REFRESH_TOKEN_SECRET="your_secure_refresh_secret_32_characters_minimum" \
+  --from-literal=TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA" \
+  --from-literal=FRONTEND_URL="http://localhost:3000"
+```
+
+#### Step 4: Deploy MongoDB and Backend Workloads
+```bash
+# Deploy persistent MongoDB storage, deployment, and service
+kubectl apply -f k8s/mongo.yaml
+
+# Deploy Express backend replicas and NodePort service
+kubectl apply -f k8s/backend.yaml
+
+# Monitor deployment rollout
+kubectl get pods -w
+```
+
+#### Step 5: Deploy the Monitoring Stack (Prometheus & Grafana)
+```bash
+# Deploy monitoring namespace, Prometheus ConfigMap/Deployment, and Grafana
+kubectl apply -f k8s/monitoring.yaml
+
+# Verify monitoring pods are running
+kubectl get pods -n monitoring
+```
+
+### 4. Accessing Services, Dashboards & Telemetry
+
+#### Accessing Backend & Verifying Metrics Scrapes
+You can access the backend service directly via Minikube or port-forwarding:
+```bash
+# Option A: Get Minikube NodePort service URL
+minikube service backend-service --url
+
+# Option B: Port-forward directly to local port 8000
+kubectl port-forward svc/backend-service 8000:8000
+```
+Verify the Prometheus metrics endpoint responds:
+```bash
+curl http://localhost:8000/metrics
+```
+
+#### Accessing Grafana Dashboard
+Forward Grafana service port `3000` to local port `3001`:
+```bash
+kubectl port-forward -n monitoring svc/grafana-service 3001:3000
+```
+* **URL:** [http://localhost:3001](http://localhost:3001)
+* **Default Username:** `admin`
+* **Default Password:** `adminpassword123` *(configured via `GF_SECURITY_ADMIN_PASSWORD` in `k8s/monitoring.yaml`)*
+
+<p align="center">
+  <img width="100%" alt="Grafana Monitoring Dashboard" src="docs/assets/grafana-monitoring-dashboard.png" />
+</p>
+
+#### Accessing Prometheus UI & Exploring Metrics
+Forward Prometheus service port `9090` to local port `9090`:
+```bash
+kubectl port-forward -n monitoring svc/prometheus-service 9090:9090
+```
+* **URL:** [http://localhost:9090](http://localhost:9090)
+* **Verify Scrape Targets:** Navigate to **Status &rarr; Targets** to confirm `backend-service.default.svc.cluster.local:8000` is in state `UP`.
+* **Example PromQL Queries:**
+  * Request rate per second by route:
+    ```promql
+    sum(rate(http_request_duration_seconds_count[1m])) by (route, method)
+    ```
+  * 95th percentile response latency:
+    ```promql
+    histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+    ```
+  * Process CPU utilization:
+    ```promql
+    rate(process_cpu_user_seconds_total[1m]) * 100
+    ```
+
+#### Connecting Prometheus Data Source in Grafana
+1. Open Grafana at `http://localhost:3001` and sign in.
+2. Navigate to **Connections &rarr; Data Sources &rarr; Add new data source &rarr; Prometheus**.
+3. Set **Prometheus server URL** to:
+   ```
+   http://prometheus-service.monitoring.svc.cluster.local:9090
+   ```
+4. Click **Save & Test**. The green notification *"Data source is working"* confirms the connection.
+
+---
+
 ## 📡 Backend REST API Overview
 
 All API routes are served under `/api/v1` and protected by rate limiting (`express-rate-limit`):
 
 ```
+/metrics                                # Root Prometheus scrape endpoint (V8 & HTTP duration metrics)
+
 /api/v1
 ├── /health
 │   └── GET  /                      # Service status & MongoDB health probe
