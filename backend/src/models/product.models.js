@@ -127,6 +127,8 @@ const productSchema = new Schema(
   }
 );
 
+productSchema.index({ createdAt: -1 });
+
 productSchema.pre("save", function () {
   this.availabilityStatus = this.stock > 0 ? "In Stock" : "Out of Stock";
 });

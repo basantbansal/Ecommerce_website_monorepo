@@ -281,6 +281,7 @@ const RamCopilotInner = () => {
     return (
       <div className="ram-copilot-container">
         <button 
+          aria-label="Open RAM Copilot AI shopping assistant"
           className="ram-copilot-trigger" 
           onClick={() => {
             if (!user) {

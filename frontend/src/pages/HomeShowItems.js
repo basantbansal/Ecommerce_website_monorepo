@@ -15,22 +15,30 @@ const navigate = useNavigate();
         onClickImage(item);
     }
 
-    const items = currItems.map(item => { // works as a for loop 
-        const productId = item._id || item.id;
-        const existing = cartItems.find(prev=>(prev._id || prev.productId || prev.id)===productId);
-        const isOutOfStock = item.stock === 0;
-        return (
-          <div
-            key={productId}
-            className="bg-white p-4 rounded-lg shadow flex flex-col"
-          >
-            <img
-            onClick = {()=>handleClickImage(item)}
-              src={item.thumbnail || item.images?.[0]}
-              alt={item.title}
-              className="w-full h-32 object-contain mb-2 cursor-pointer"
-            />
-
+    const items = currItems.map((item, index) => {
+    const productId = item._id || item.id;
+    const existing = cartItems.find(
+      (prev) => (prev._id || prev.productId || prev.id) === productId
+    );
+    const isOutOfStock = item.stock === 0;
+    const isAboveFold = index < 2; // First 2 items are visible immediately on mobile
+  
+    return (
+      <div
+        key={productId}
+        className="bg-white p-4 rounded-lg shadow flex flex-col"
+      >
+        <img
+          onClick={() => handleClickImage(item)}
+          src={item.thumbnail || item.images?.[0]}
+          alt={item.title}
+          loading={isAboveFold ? "eager" : "lazy"}
+          fetchPriority={isAboveFold ? "high" : "auto"}
+          decoding="async"
+          width="128"
+          height="128"
+          className="w-full h-32 object-contain mb-2 cursor-pointer"
+        />
             <h2 className="text-sm font-medium line-clamp-2">
               {item.title}
             </h2>

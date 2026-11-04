@@ -100,12 +100,19 @@ const importDummyProducts = asyncHandler(async (req, res) => {
 })
 
 const getProducts = asyncHandler(async (_, res) => {
-    const products = await Product.find().sort({ createdAt: -1 })
+  // Cache for 60 seconds, serve stale content for up to 5 minutes while revalidating
+  res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+  const products = await Product.find()
+    .sort({ createdAt: -1 })
+    .select(
+      "title price discountPercentage rating stock availabilityStatus thumbnail images category brand"
+    )
+    .lean();
 
-    return res
+  return res
     .status(200)
-    .json(new ApiResponse(200, products, "Products fetched successfully"))
-})
+    .json(new ApiResponse(200, products, "Products fetched successfully"));
+});
 
 const getProductById = asyncHandler(async (req, res) => {
     const product = await Product.findById(req.params.productId)

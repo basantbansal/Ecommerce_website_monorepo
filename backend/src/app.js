@@ -10,7 +10,7 @@ import orderRoute from "./routes/order.route.js";
 import paymentRoute from "./routes/payment.route.js";
 import agentRoute from "./routes/agent.route.js";
 import client from 'prom-client';
-
+import compression from "compression";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -79,7 +79,7 @@ app.use(cors({
   credentials: true
 }));
 
-
+app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
@@ -87,7 +87,7 @@ app.use(express.static("public"));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 100, // Limit each IP to 100 requests per window
+  limit: 5000, // Limit each IP to 100 requests per window
   standardHeaders: 'draft-7', 
   legacyHeaders: false, 
   message: {
@@ -98,7 +98,7 @@ const apiLimiter = rateLimit({
 
 // Apply rate limiter to all API routes
 app.use("/api", apiLimiter);
-
+rateLimit
 app.get("/api/v1/health", (_, res) => {
   const databaseConnected = mongoose.connection.readyState === 1;
 
