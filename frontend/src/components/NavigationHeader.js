@@ -162,7 +162,7 @@ function NavigationHeader() {
                         >
                             <img
                                 src={logo}
-                                alt="Amazing logo"
+                                alt="Buy-It logo"
                                 className="h-9 w-auto transition-transform duration-200 hover:scale-105"
                             />
                         </a>

@@ -1,6 +1,6 @@
 # E-Commerce Website Frontend
 
-A modern React-based e-commerce frontend that works like Amazon. This project showcases a fully-functional shopping experience with product browsing, cart management, user authentication, and seamless checkout flow.
+A modern React-based e-commerce frontend for BuyIt. This project showcases a fully-functional shopping experience with product browsing, cart management, user authentication, and seamless checkout flow.
 
 **🚀 Live Demo**: https://e-commerce-website-ten-dusky.vercel.app
 

@@ -135,7 +135,7 @@ function LoginPage() {
 
                     <div className="flex justify-center my-2">
                         <Turnstile
-                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
                             onSuccess={(token) => setTurnstileToken(token)}
                             onError={() => setError("Security check failed")}
                             onExpire={() => setTurnstileToken(null)}

@@ -132,7 +132,6 @@ const fetchItems = async ({ forceRefresh = false } = {}) => {
     const response = await axios.get("https://dummyjson.com/products");
     cachedProducts = response.data?.products || [];
   }
-  console.log(cachedProducts);
   return cachedProducts;
 };
 

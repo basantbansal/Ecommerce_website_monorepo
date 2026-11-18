@@ -18,6 +18,8 @@ function RegisterPage() {
   const [avatar, setAvatar] = useState(null);
   const [coverImage, setCoverImage] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load saved data from localStorage when the component mounts
   useEffect(() => {
@@ -52,36 +54,38 @@ function RegisterPage() {
 
   const handleSubmit = async () => {
     try {
-        const formDataToSend = new FormData()  // FormData because we have files
-        formDataToSend.append("fullName", formData.fullName)
-        formDataToSend.append("username", formData.username)
-        formDataToSend.append("email", formData.email)
-        formDataToSend.append("password", formData.password)
+        setError("");
+        setIsSubmitting(true);
+        const formDataToSend = new FormData();
+        formDataToSend.append("fullName", formData.fullName);
+        formDataToSend.append("username", formData.username);
+        formDataToSend.append("email", formData.email);
+        formDataToSend.append("password", formData.password);
         if (avatar) {
-          formDataToSend.append("avatar", avatar)          // file
+          formDataToSend.append("avatar", avatar);
         }
         if (coverImage) {
-          formDataToSend.append("coverImage", coverImage)  // file
+          formDataToSend.append("coverImage", coverImage);
         }
 
-        const response = await registerUser(formDataToSend)
-        console.log(response.data)
-        // Clear localStorage on success
+        await registerUser(formDataToSend);
         localStorage.removeItem("registerFormData");
-        navigate("/login", { state: { message: "Registered successfully! Check your inbox and verify your email before logging in." } })
+        navigate("/login", { state: { message: "Registered successfully! Check your inbox and verify your email before logging in." } });
 
-    } catch (error) {
-        console.log(error)
-        alert(error.response?.data?.message || "Something went wrong")
+    } catch (err) {
+        setError(err.response?.data?.message || "Registration failed. Please check your details and try again.");
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-        await googleLogin(credentialResponse.credential)
-        navigate("/", { state: { message: "Registered and logged in successfully" } })
+        setError("");
+        await googleLogin(credentialResponse.credential);
+        navigate("/", { state: { message: "Registered and logged in successfully" } });
     } catch (err) {
-        alert(err.response?.data?.message || "Google Login failed")
+        setError(err.response?.data?.message || "Google Login failed");
     }
   };
 
@@ -193,8 +197,10 @@ function RegisterPage() {
             />
           </div>
 
-          <Button primary onClick={handleSubmit} className="mt-2 w-full justify-center">
-            Register
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <Button primary onClick={handleSubmit} disabled={isSubmitting} className="mt-2 w-full justify-center">
+            {isSubmitting ? "Registering..." : "Register"}
           </Button>
 
           <div className="flex items-center my-2 before:flex-1 before:border-t before:border-gray-300 before:mt-0.5 after:flex-1 after:border-t after:border-gray-300 after:mt-0.5">
@@ -204,7 +210,7 @@ function RegisterPage() {
           <div className="flex justify-center w-full">
               <GoogleLogin
                   onSuccess={handleGoogleSuccess}
-                  onError={() => alert("Google login failed")}
+                  onError={() => setError("Google login failed")}
               />
           </div>
 

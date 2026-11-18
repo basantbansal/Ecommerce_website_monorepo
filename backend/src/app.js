@@ -98,7 +98,7 @@ const apiLimiter = rateLimit({
 
 // Apply rate limiter to all API routes
 app.use("/api", apiLimiter);
-rateLimit
+
 app.get("/api/v1/health", (_, res) => {
   const databaseConnected = mongoose.connection.readyState === 1;
 

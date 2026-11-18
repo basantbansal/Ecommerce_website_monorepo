@@ -88,6 +88,7 @@ function HomePage() {
       )}
 
       {/* PRODUCTS GRID */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <HomeShowItems
           currItems={filteredItems}
           onClickButton={handleClickButton}
@@ -98,6 +99,7 @@ function HomePage() {
               : "No products found."
           }
         />
+      </main>
     </>
   );
 }
